@@ -1,0 +1,42 @@
+# Secrets — never commit. These hold the MongoDB Atlas password and JWT secret.
+# Matched at any depth, so a new subfolder can't leak one by accident.
+**/.env
+**/.env.local
+**/.env.*.local
+!**/.env.example
+
+# Dependencies
+**/node_modules/
+
+# Build output
+**/dist/
+**/dist-ssr/
+**/build/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Design reference — Stitch mockups and screenshots (desktop + mobile).
+# Nothing builds from these; keep them locally instead.
+stitch_daymark_editorial_social_journaling/
+stitch_mobile/
+stitch_chat/
+
+# Your friend's backend — lives in his own repo, not committed here.
+perfectbackend/
+backend/

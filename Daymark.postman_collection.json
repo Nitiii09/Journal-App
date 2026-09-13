@@ -1,0 +1,450 @@
+{
+  "info": {
+    "name": "Daymark — pbackend",
+    "description": "Journal App API (pbackend build).\n\nSETUP\n1. Import this file into Postman.\n2. Run 'Auth > Login' first — it auto-saves the JWT into the {{token}} collection variable, so every protected request just works.\n3. Run 'Friends > Search users' to grab a {{receiverId}}, then send a request.\n\nNOTE ON PASSWORDS\nThe API expects the PLAINTEXT password under the key 'passwordHash'. That naming is the API's, not a mistake in these requests — the server hashes it.\n\nKNOWN ISSUES IN THIS BUILD\n- POST /auth/signup returns 500 ('Assignment to constant variable') — new accounts cannot be created.\n- GET /friends/requests returns BOTH incoming and outgoing pending requests.\n- /api/users/* has no auth — it works with no token at all.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "username", "value": "rahul", "type": "string" },
+    { "key": "password", "value": "secret123", "type": "string" },
+    { "key": "userId", "value": "", "type": "string" },
+    { "key": "receiverId", "value": "", "type": "string" },
+    { "key": "requestId", "value": "", "type": "string" },
+    { "key": "friendId", "value": "", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Root",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/", "host": ["{{baseUrl}}"], "path": [""] }
+          }
+        },
+        {
+          "name": "Health check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Signup",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "",
+                  "if (pm.response.code === 500 && /constant variable/i.test(body.err || '')) {",
+                  "    console.warn('KNOWN BUG: signup crashes on username.trim() — const reassignment in authController.js line 16.');",
+                  "}",
+                  "",
+                  "if (body.token) {",
+                  "    pm.collectionVariables.set('token', body.token);",
+                  "    pm.collectionVariables.set('userId', body.user.userId);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"newuser01\",\n  \"passwordHash\": \"secret123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/signup",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "signup"]
+            },
+            "description": "passwordHash = the PLAINTEXT password; the server hashes it.\n\nEXPECTED IN THIS BUILD: 500 {\"message\":\"failed to signup\",\"err\":\"Assignment to constant variable.\"}"
+          }
+        },
+        {
+          "name": "Login  ← RUN THIS FIRST",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "if (body.token) {",
+                  "    pm.collectionVariables.set('token', body.token);",
+                  "    pm.collectionVariables.set('userId', body.user.userId);",
+                  "    console.log('Token saved. userId =', body.user.userId);",
+                  "}",
+                  "",
+                  "pm.test('login response omits username (known API gap)', () => {",
+                  "    pm.expect(body.user.username).to.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"passwordHash\": \"{{password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Saves {{token}} and {{userId}} automatically.\n\nNote: the response returns user.name / email / role, none of which exist on the User schema, and omits username."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            },
+            "description": "Clears the cookie only. A Bearer token stays valid until it expires."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Search users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "",
+                  "if (body.users && body.users.length) {",
+                  "    const other = body.users.find(u => u.userId !== pm.collectionVariables.get('userId'));",
+                  "    if (other) {",
+                  "        pm.collectionVariables.set('receiverId', other.userId);",
+                  "        pm.collectionVariables.set('friendId', other.userId);",
+                  "        console.log('receiverId set to', other.username, other.userId);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/search?username=ma",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "search"],
+              "query": [{ "key": "username", "value": "ma" }]
+            },
+            "description": "Param is ?username= (NOT ?q=).\n\nNo auth required in this build.\nDoes not exclude yourself from results.\nRegex is unescaped — ?username=.* returns every user."
+          }
+        },
+        {
+          "name": "All users",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "all"]
+            },
+            "description": "Dumps every user. No auth required — works with no token at all."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Friends",
+      "item": [
+        {
+          "name": "Send friend request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.friendRequest) {",
+                  "    pm.collectionVariables.set('requestId', body.friendRequest._id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"receiverId\": \"{{receiverId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/friends/request",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "friends", "request"]
+            },
+            "description": "Run 'Search users' first to populate {{receiverId}}.\n\n201 created | 400 self/missing | 404 no such user | 409 already friends or request exists"
+          }
+        },
+        {
+          "name": "Get friend requests",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const me = pm.collectionVariables.get('userId');",
+                  "",
+                  "const incoming = (body.requests || []).find(r => {",
+                  "    const rid = r.receiverId && r.receiverId._id ? r.receiverId._id : r.receiverId;",
+                  "    return String(rid) === String(me);",
+                  "});",
+                  "",
+                  "if (incoming) pm.collectionVariables.set('requestId', incoming._id);",
+                  "",
+                  "const outgoing = (body.requests || []).filter(r => {",
+                  "    const sid = r.senderId && r.senderId._id ? r.senderId._id : r.senderId;",
+                  "    return String(sid) === String(me);",
+                  "});",
+                  "",
+                  "if (outgoing.length) {",
+                  "    console.warn('This endpoint also returns ' + outgoing.length + ' request(s) YOU sent. Accepting one of those will 404.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/friends/requests",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "friends", "requests"]
+            },
+            "description": "Returns BOTH incoming and outgoing pending requests in this build. Filter by receiverId === your userId to get true incoming."
+          }
+        },
+        {
+          "name": "Accept friend request",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/friends/request/{{requestId}}/accept",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "friends", "request", "{{requestId}}", "accept"]
+            },
+            "description": "Only the RECEIVER can accept. Accepting a request you sent returns 404."
+          }
+        },
+        {
+          "name": "Reject friend request",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/friends/request/{{requestId}}/reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "friends", "request", "{{requestId}}", "reject"]
+            },
+            "description": "Only the RECEIVER can reject. Deletes the row."
+          }
+        },
+        {
+          "name": "View friends",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.friends && body.friends.length) {",
+                  "    pm.collectionVariables.set('friendId', body.friends[0]._id);",
+                  "    console.log('friendId set to', body.friends[0].username);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/friends/viewFriends",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "friends", "viewFriends"]
+            },
+            "description": "Returns { _id, username } only — no streak / wroteToday in this build."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Journals",
+      "item": [
+        {
+          "name": "Create journal",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Testing the API from Postman. One page a day.\",\n  \"isPublic\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/journals/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "journals", "create"]
+            },
+            "description": "One per IST calendar day.\n\n201 created | 400 no content | 409 already wrote today\n\nOptional: \"journalDate\": \"2026-08-14\" to backfill an earlier day."
+          }
+        },
+        {
+          "name": "Edit today's journal",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Edited from Postman.\",\n  \"isPublic\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/journals/today/edit",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "journals", "today", "edit"]
+            },
+            "description": "Both fields optional. 404 if you haven't written today."
+          }
+        },
+        {
+          "name": "My journals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/journals/mine",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "journals", "mine"]
+            },
+            "description": "All your entries, newest first. Includes private ones."
+          }
+        },
+        {
+          "name": "Today's journal",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/journals/today",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "journals", "today"]
+            },
+            "description": "404 if today is unwritten — that is a normal state, not an error."
+          }
+        },
+        {
+          "name": "Friends' journals today  (GATED)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/journals/friends/today",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "journals", "friends", "today"]
+            },
+            "description": "THE UNLOCK GATE.\n\n403 until YOU have written today. Run 'Create journal' first, then this returns 200.\n\nThis is the core product mechanic — write to unlock."
+          }
+        },
+        {
+          "name": "Friends written today  (GATED)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/journals/friends/written-today",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "journals", "friends", "written-today"]
+            },
+            "description": "Names only, no content. Same 403 gate."
+          }
+        },
+        {
+          "name": "A friend's journals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/journals/friend/{{friendId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "journals", "friend", "{{friendId}}"]
+            },
+            "description": "Their PUBLIC entries, all time. 403 if not friends. Not gated on your own writing."
+          }
+        },
+        {
+          "name": "A friend's journal today  (GATED)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/journals/friend/{{friendId}}/today",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "journals", "friend", "{{friendId}}", "today"]
+            },
+            "description": "403 if not friends OR you haven't written today. 404 if they have no public entry today.\n\nNote: userId comes back as a bare ObjectId here, not populated with username."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,331 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   DAYMARK — design tokens
+   Light: warm parchment. Dark: deep ink navy with luminous accents.
+   Values are "R G B" triplets so Tailwind can apply opacity modifiers.
+   ========================================================================== */
+
+@layer base {
+  :root {
+    --surface: 252 249 248;
+    --surface-dim: 236 231 229;
+    --surface-lowest: 255 255 255;
+    --surface-low: 246 243 242;
+    --surface-container: 240 237 237;
+    --surface-high: 234 231 231;
+    --surface-highest: 229 226 225;
+
+    --on-surface: 28 27 27;
+    --on-surface-variant: 90 65 61;
+
+    --outline: 142 112 108;
+    --outline-variant: 226 190 186;
+
+    --primary: 179 40 33;
+    --primary-bright: 255 95 80;
+    --on-primary: 255 255 255;
+    --primary-fixed: 255 218 213;
+
+    --secondary: 0 64 224;
+    --secondary-container: 46 91 255;
+    --on-secondary: 255 255 255;
+    --secondary-fixed: 221 225 255;
+
+    --tertiary: 87 101 0;
+    --tertiary-bright: 210 240 0;
+    --tertiary-fixed: 235 246 172;
+
+    --lavender: 108 84 214;
+    --lavender-fixed: 226 219 255;
+    --mint: 22 122 100;
+    --mint-fixed: 205 240 228;
+
+    --error: 186 26 26;
+    --error-container: 255 218 214;
+    --on-error-container: 147 0 10;
+
+    --shadow-hard: 90 65 61;
+    /* Grain is texture, not a visible pattern — barely there is the point. */
+    --grain-opacity: 0.022;
+  }
+
+  .dark {
+    --surface: 10 12 16;
+    --surface-dim: 7 9 12;
+    --surface-lowest: 6 7 10;
+    --surface-low: 15 18 24;
+    --surface-container: 21 25 32;
+    --surface-high: 29 34 43;
+    --surface-highest: 38 44 55;
+
+    --on-surface: 242 239 238;
+    --on-surface-variant: 190 174 171;
+
+    --outline: 132 120 118;
+    --outline-variant: 62 54 53;
+
+    --primary: 255 122 108;
+    --primary-bright: 255 95 80;
+    --on-primary: 62 3 0;
+    --primary-fixed: 84 20 16;
+
+    --secondary: 142 162 255;
+    --secondary-container: 46 91 255;
+    --on-secondary: 255 255 255;
+    --secondary-fixed: 27 35 76;
+
+    --tertiary: 184 211 0;
+    --tertiary-bright: 210 240 0;
+    --tertiary-fixed: 48 56 8;
+
+    --lavender: 172 158 255;
+    --lavender-fixed: 42 34 72;
+    --mint: 92 214 178;
+    --mint-fixed: 16 48 40;
+
+    --error: 255 138 128;
+    --error-container: 96 16 16;
+    --on-error-container: 255 218 214;
+
+    --shadow-hard: 0 0 0;
+    --grain-opacity: 0.035;
+  }
+
+  * {
+    border-color: rgb(var(--outline-variant));
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-surface text-on-surface font-sans;
+    /* Grain is applied via ::before so it never tints child content. */
+    position: relative;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Global grain / noise texture — "Digital Ephemera" tactility. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: var(--grain-opacity);
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 220 220' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  ::selection {
+    background: rgb(var(--primary-fixed));
+    color: rgb(var(--on-surface));
+  }
+
+  /* Editorial scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: rgb(var(--surface-low));
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--outline-variant));
+    border: 2px solid rgb(var(--surface-low));
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--outline));
+  }
+
+  :focus-visible {
+    outline: 2px solid rgb(var(--primary));
+    outline-offset: 3px;
+  }
+}
+
+/* ==========================================================================
+   Component-level primitives
+   ========================================================================== */
+
+@layer components {
+  /* A sheet of paper: 1px hairline + hard offset shadow, never a soft blur. */
+  .paper {
+    @apply bg-surface-lowest border border-outline-variant/60 shadow-paper;
+  }
+
+  .paper-flat {
+    @apply bg-surface-lowest border border-outline-variant/60;
+  }
+
+  /* Ruled-notebook input: a single heavy bottom border, no box. */
+  .rule-input {
+    @apply w-full bg-transparent border-0 border-b-2 border-outline-variant
+           px-0 py-3 text-on-surface placeholder:text-on-surface-variant/45
+           focus:border-primary focus:ring-0 transition-colors duration-200;
+  }
+
+  /* Washi tape. Used sparingly now — a single quiet marker on the thing
+     that matters on a page, rather than stuck to every card. */
+  .washi {
+    @apply absolute pointer-events-none mix-blend-multiply opacity-50;
+  }
+  .dark .washi {
+    @apply mix-blend-screen opacity-25;
+  }
+
+  .label-caps {
+    @apply font-display text-label-caps uppercase tracking-[0.1em];
+  }
+
+  .hairline {
+    @apply h-px w-full bg-outline-variant/70 border-0;
+  }
+
+  /**
+   * The WYSIWYG writing surface.
+   *
+   * A contenteditable produces real elements, so its formatting has to be
+   * styled in CSS rather than through React components. These rules mirror
+   * components/ui/Markdown.jsx deliberately: what the writer sees while
+   * typing should be what the reader sees afterwards.
+   */
+  .rich-text {
+    @apply font-journal text-journal-body leading-[1.8] text-on-surface;
+  }
+
+  .rich-text > *:first-child {
+    @apply mt-0;
+  }
+  .rich-text > *:last-child {
+    @apply mb-0;
+  }
+
+  .rich-text h1 {
+    @apply mb-3 mt-8 font-display text-2xl font-bold leading-tight tracking-tight md:text-3xl;
+  }
+  .rich-text h2 {
+    @apply mb-3 mt-7 font-display text-xl font-bold leading-tight tracking-tight md:text-2xl;
+  }
+  .rich-text h3 {
+    @apply mb-2 mt-6 font-display text-lg font-bold leading-tight tracking-tight;
+  }
+
+  .rich-text p,
+  .rich-text div {
+    @apply mb-5;
+  }
+
+  .rich-text strong,
+  .rich-text b {
+    @apply font-semibold text-on-surface;
+  }
+  .rich-text em,
+  .rich-text i {
+    @apply italic;
+  }
+
+  .rich-text a {
+    @apply text-primary underline decoration-primary/40 underline-offset-[3px];
+  }
+
+  .rich-text ul {
+    @apply mb-5 list-disc space-y-2 pl-6;
+  }
+  .rich-text ol {
+    @apply mb-5 list-decimal space-y-2 pl-6;
+  }
+  .rich-text li::marker {
+    @apply text-primary;
+  }
+
+  .rich-text blockquote {
+    @apply mb-5 border-l-2 border-primary/50 pl-5 italic text-on-surface-variant;
+  }
+
+  .rich-text code {
+    @apply rounded bg-surface-container px-1.5 py-0.5 font-mono text-[0.85em];
+  }
+  .rich-text pre {
+    @apply mb-5 overflow-x-auto rounded-lg border border-outline-variant/60 bg-surface-container p-4;
+  }
+
+  .rich-text hr {
+    @apply my-8 border-0 border-t border-outline-variant/70;
+  }
+
+  /* Frosted layer — used sparingly, for the locked feed and mobile nav only. */
+  .frost {
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .text-pretty {
+    text-wrap: pretty;
+  }
+
+  /* Faint ruled lines behind the journal editor. */
+  .ruled-paper {
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent,
+      transparent 39px,
+      rgb(var(--outline-variant) / 0.5) 39px,
+      rgb(var(--outline-variant) / 0.5) 40px
+    );
+    background-attachment: local;
+  }
+
+  .grain-panel {
+    position: relative;
+  }
+  .grain-panel::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.5;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23m)' opacity='0.06'/%3E%3C/svg%3E");
+  }
+
+  /* Oversized decorative watermark type. Faint enough to read as paper
+     texture rather than as a second headline competing with the real one. */
+  .watermark {
+    @apply pointer-events-none select-none font-display font-extrabold uppercase
+           text-on-surface/[0.015] leading-none tracking-tighter;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .writing-vertical {
+    writing-mode: vertical-rl;
+  }
+}
+
+/* Respect reduced-motion for every animation in the app. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
